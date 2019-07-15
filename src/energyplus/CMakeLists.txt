@@ -560,6 +560,8 @@ set(${target_name}_test_src
 
   Test/CoilHeatingGas_GTest.cpp
   Test/CoilCoolingDXMultiSpeed_GTest.cpp
+  Test/CoilWaterHeatingDesuperheater_GTest.cpp
+  Test/CoilHeatingDesuperheater_GTest.cpp
   Test/Construction_GTest.cpp
   Test/DaylightingControl_GTest.cpp
   Test/DaylightingDeviceShelf_GTest.cpp
@@ -573,6 +575,8 @@ set(${target_name}_test_src
   Test/ExteriorFuelEquipment_GTest.cpp
   Test/ExteriorWaterEquipment_GTest.cpp
   Test/ExternalInterfaceFT_GTest.cpp
+  Test/FanConstantVolume_GTest.cpp
+  Test/FanVariableVolume_GTest.cpp
   Test/FuelCell_GTest.cpp
   Test/GasEquipment_GTest.cpp
   Test/GeneratorMicroTurbine_GTest.cpp

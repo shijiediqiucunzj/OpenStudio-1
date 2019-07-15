@@ -27,85 +27,63 @@
 *  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************************************************************/
 
-#include "Json.hpp"
+#include <gtest/gtest.h>
+#include "EnergyPlusFixture.hpp"
 
-#include "Assert.hpp"
-#include "PathHelpers.hpp"
-#include "Logger.hpp"
-#include "FilesystemHelpers.hpp"
+#include "../ForwardTranslator.hpp"
 
-#include <OpenStudio.hxx>
+#include "../../model/FanConstantVolume.hpp"
 
-namespace openstudio {
+#include "../../model/Model.hpp"
+#include "../../model/Node.hpp"
+#include "../../model/AirLoopHVAC.hpp"
 
-// assert key is present
-void assertKey(const Json::Value& value, const std::string& key)
-{
-  if (!checkKey(value, key)){
-    throw openstudio::Exception(std::string("Cannot find key '" + key + "'"));
-  }
+#include <utilities/idd/Fan_ConstantVolume_FieldEnums.hxx>
+#include <utilities/idd/IddEnums.hxx>
+
+using namespace openstudio::energyplus;
+using namespace openstudio::model;
+using namespace openstudio;
+
+TEST_F(EnergyPlusFixture, ForwardTranslator_FanConstantVolume_EndUseSubCategory) {
+
+  Model m;
+
+  FanConstantVolume fan(m);
+
+  std::string endUse("Special Fan");
+  fan.setEndUseSubcategory(endUse);
+
+  // Assign it to a loop
+  AirLoopHVAC a(m);
+  Node supplyOutletNode = a.supplyOutletNode();
+  fan.addToNode(supplyOutletNode);
+
+  // ForwardTranslate
+  ForwardTranslator ft;
+  Workspace w = ft.translateModel(m);
+
+  WorkspaceObjectVector idfObjs(w.getObjectsByType(IddObjectType::Fan_ConstantVolume));
+  ASSERT_EQ(1u, idfObjs.size());
+  WorkspaceObject idf_fan(idfObjs[0]);
+
+  // End Use Subcategory
+  boost::optional<std::string> _idfEndUse = idf_fan.getString(Fan_ConstantVolumeFields::EndUseSubcategory);
+  ASSERT_TRUE(_idfEndUse);
+  EXPECT_EQ(endUse, _idfEndUse.get());
 }
 
-// assert type is correct if key is present
-void assertType(const Json::Value& value, const std::string& key, const Json::ValueType& valueType)
-{
-  if (!checkType(value, key, valueType)){
-    throw openstudio::Exception(std::string("Key '" + key + "' is of wrong type"));
-  }
-}
+// The Forward Translator should not translate fan if not used (by an AirLoopHVAC, or a ZoneHVACComponent )
+TEST_F(EnergyPlusFixture, ForwardTranslator_FanConstantVolume_NotUsed) {
 
-// assert key is present and type is correct
-void assertKeyAndType(const Json::Value& value, const std::string& key, const Json::ValueType& valueType)
-{
-  assertKey(value, key);
-  assertType(value, key, valueType);
-}
+  Model m;
 
-/// check key is present, return false if key is not found
-bool checkKey(const Json::Value& value, const std::string& key)
-{
-  if (!value.isMember(key)){
-    return false;
-  }
-  return true;
-}
+  FanConstantVolume fan(m);
 
-/// check type is correct if key is present, return false if type is not correct
-bool checkType(const Json::Value& value, const std::string& key, const Json::ValueType& valueType)
-{
-  if (value.isMember(key)){
-    if (!value[key].isConvertibleTo(valueType)){
-      return false;
-    }
-    if (valueType != Json::nullValue){
-      if (value[key].isNull()){
-        return false;
-      }
-    }
-  }
-  return true;
-}
+  // ForwardTranslate
+  ForwardTranslator ft;
+  Workspace w = ft.translateModel(m);
 
-/// check key is present and type is correct, return false if key not found or type is not correct
-bool checkKeyAndType(const Json::Value& value, const std::string& key, const Json::ValueType& valueType)
-{
-  if (value.isMember(key)) {
-    if (value[key].isConvertibleTo(valueType)) {
-      if (value[key].isNull()) {
-        if (valueType == Json::nullValue) {
-          return true;
-        } else {
-          return false;
-        }
-      } 
-      // not null and is convertible
-      return true;
-    } else {
-     // not convertible to valueType
-     LOG_FREE(Warn, "JSON", "Key '" << key << "' exists but is not the correct type");
-    }
-  }
-  return false;
+  WorkspaceObjectVector idfObjs(w.getObjectsByType(IddObjectType::Fan_ConstantVolume));
+  EXPECT_EQ(0u, idfObjs.size());
 }
-
-} // openstudio
